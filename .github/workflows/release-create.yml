@@ -61,51 +61,11 @@ jobs:
           default_bump: false
           default_prerelease_bump: false
           dry_run: true # Don't create tag, we do this later
+
       - name: Get release details
         id: get-release-details
         run: |
-          get_priority() {
-            case "$1" in
-            "major") echo 3 ;;
-            "minor") echo 2 ;;
-            "patch") echo 1 ;;
-            *) echo 0 ;;
-            esac
-          }
-
-          INPUT_BUMP_PRIORITY=$(get_priority "$VERSION_BUMP_INPUT")
-          INFERRED_BUMP_PRIORITY=$(get_priority "$VERSION_BUMP_INFERRED")
-
-          # Determine version bump
-          if [ "$INPUT_BUMP_PRIORITY" -eq 0 ] && [ "$INFERRED_BUMP_PRIORITY" -eq 0 ]; then
-            VERSION_BUMP=""
-          elif [ "$INPUT_BUMP_PRIORITY" -gt "$INFERRED_BUMP_PRIORITY" ]; then
-            VERSION_BUMP=$VERSION_BUMP_INPUT
-          elif [ "$INFERRED_BUMP_PRIORITY" -gt "$INPUT_BUMP_PRIORITY" ]; then
-            echo "::error::Specified version bump ($VERSION_BUMP_INPUT) is smaller than the version bump inferred from commits ($VERSION_BUMP_INFERRED)"
-            exit 1
-          else
-            VERSION_BUMP=$VERSION_BUMP_INFERRED
-          fi
-
-          # Determine whether to release
-          RELEASE=true
-          if [ "$VERSION_BUMP" == "" ] || [ "$DRY_RUN" == "true" ]; then
-            RELEASE=false
-          fi
-
-          echo "release-type=$VERSION_BUMP" >> $GITHUB_OUTPUT
-          echo "make-release=$RELEASE" >> $GITHUB_OUTPUT
-
-          echo "
-          Output:
-          release-type=$VERSION_BUMP
-          make-release=$RELEASE
-          "
-        env:
-          VERSION_BUMP_INPUT: ${{ inputs.version-bump }}
-          VERSION_BUMP_INFERRED: ${{ steps.get-inferred-version-bump.outputs.release_type }}
-          DRY_RUN: ${{ inputs.dry-run }}
+          echo ${{ steps.get-release-details.outputs.release-type }}
       #
       # - name: Increment Version
       #   id: increment-version
