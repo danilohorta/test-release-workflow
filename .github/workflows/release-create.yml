@@ -6,7 +6,7 @@ on:
       commit:
         description: Branch, tag or commit hash
         type: string
-        required: true
+        required: false
         default: main
 
       version-bump:
@@ -18,11 +18,13 @@ on:
           - 'patch': patch version bump.
         type: string
         required: false
+        default: auto
 
       dry-run:
         description: Run in preview mode. Shows the next version number without creating a tag or release.
         type: boolean
         required: false
+        default: false
 
 permissions:
   contents: write
