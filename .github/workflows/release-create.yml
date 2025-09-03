@@ -53,8 +53,8 @@ jobs:
         env:
           VERSION_BUMP: ${{ inputs.version-bump }}
 
-      - name: Get auto-determined version bump
-        id: get-auto-version-bump
+      - name: Get inferred version bump
+        id: get-inferred-version-bump
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -65,7 +65,9 @@ jobs:
       - name: Get release details
         id: get-release-details
         run: |
-          echo ${{ steps.get-auto-version-bump.outputs.previous_tag }}
+          echo ${{ inputs.version-bump }}
+          echo ${{ steps.get-inferred-version-bump.outputs.previous_tag }}
+          echo ${{ steps.get-inferred-version-bump.outputs.release_type }}
       #
       # - name: Increment Version
       #   id: increment-version
