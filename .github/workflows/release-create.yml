@@ -66,8 +66,12 @@ jobs:
         id: get-release-details
         run: |
           echo ${{ inputs.version-bump }}
-          echo ${{ steps.get-inferred-version-bump.outputs.previous_tag }}
-          echo ${{ steps.get-inferred-version-bump.outputs.release_type }}
+          echo new_tag: ${{ steps.get-inferred-version-bump.outputs.new_tag }}
+          echo new_version: ${{ steps.get-inferred-version-bump.outputs.new_version }}
+          echo previous_tag: ${{ steps.get-inferred-version-bump.outputs.previous_tag }}
+          echo previous_version: ${{ steps.get-inferred-version-bump.outputs.previous_version }}
+          echo release_type: ${{ steps.get-inferred-version-bump.outputs.release_type }}
+          echo changelog: ${{ steps.get-inferred-version-bump.outputs.changelog }}
       #
       # - name: Increment Version
       #   id: increment-version
