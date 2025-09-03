@@ -1,0 +1,178 @@
+name: Create Release
+
+on:
+  workflow_call:
+    inputs:
+      commit:
+        description: Branch, tag or commit hash
+        type: string
+        required: true
+        default: main
+
+      version-bump:
+        description: |
+          Optional version bump. One of: 'major', 'minor', 'patch', or 'auto'.
+          - 'auto' (default): infer the bump from Conventional Commits since the last release; if none can be inferred, no release is created.
+          - 'major': major version bump.
+          - 'minor': minor version bump.
+          - 'patch': patch version bump.
+        type: string
+        required: false
+
+      dry-run:
+        description: Run in preview mode. Shows the next version number without creating a tag or release.
+        type: boolean
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+
+      - name: Validate version-bump input
+        run: |
+          case "${VERSION_BUMP}" in
+            auto|major|minor|patch) ;;
+            *) echo "::error::manual-version-bump must be 'auto', 'major', 'minor' or 'patch'"; exit 1;;
+          esac
+        env:
+          VERSION_BUMP: ${{ inputs.version-bump }}
+      #
+      # - name: Get auto-determined version bump
+      #   id: get-auto-version-bump
+      #   uses: mathieudutour/github-tag-action@v6.2
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     default_bump: false
+      #     default_prerelease_bump: false
+      #     dry_run: true # Don't create tag, we do this later
+      #
+      # - name: Get release details
+      #   id: get-release-details
+      #   run: |
+      #     case "$VERSION_BUMP" in
+      #       "major") MANUAL_PRIORITY=3 ;;
+      #       "minor") MANUAL_PRIORITY=2 ;;
+      #       "patch") MANUAL_PRIORITY=1 ;;
+      #       *) MANUAL_PRIORITY=0 ;;
+      #     esac
+      #
+      #     case "$AUTO_VERSION_BUMP" in
+      #       "major") AUTO_PRIORITY=3 ;;
+      #       "minor") AUTO_PRIORITY=2 ;;
+      #       "patch") AUTO_PRIORITY=1 ;;
+      #       *) AUTO_PRIORITY=0 ;;
+      #     esac
+      #
+      #     RELEASE=true
+      #     if [ $DRY_RUN ]; then
+      #       RELEASE=false
+      #     fi
+      #
+      #     if [ $MANUAL_PRIORITY -eq 0 ] && [ $AUTO_PRIORITY -eq 0 ]; then
+      #       VERSION_BUMP=""
+      #       RELEASE=false
+      #     elif [ $AUTO_PRIORITY -gt $MANUAL_PRIORITY ]; then
+      #       echo "::error::Manual version bump ($VERSION_BUMP) is smaller than the auto-determined version bump ($AUTO_VERSION_BUMP)"
+      #       echo "::error::Manual version bump must be greater than or equal to the auto-determined version bump."
+      #       exit 1
+      #     elif [ $MANUAL_PRIORITY -gt $AUTO_PRIORITY ]; then
+      #       VERSION_BUMP=$VERSION_BUMP
+      #     else
+      #       VERSION_BUMP=$AUTO_VERSION_BUMP
+      #     fi
+      #
+      #     echo "release-type=$VERSION_BUMP" >> $GITHUB_OUTPUT
+      #     echo "make-release=$RELEASE" >> $GITHUB_OUTPUT
+      #
+      #     echo "
+      #     Output:
+      #     release-type=$VERSION_BUMP
+      #     make-release=$RELEASE
+      #     "
+      #   env:
+      #     VERSION_BUMP: ${{ inputs.version-bump }}
+      #     AUTO_VERSION_BUMP: ${{ steps.get-auto-version-bump.outputs.release_type }}
+      #     DRY_RUN: ${{ inputs.dry-run }}
+      #
+      # - name: Increment Version
+      #   id: increment-version
+      #   uses: christian-draeger/increment-semantic-version@1.2.3
+      #   if: steps.get-release-details.outputs.release-type
+      #   with:
+      #     current-version: ${{ steps.get-auto-version-bump.outputs.previous_tag }}
+      #     version-fragment: ${{ steps.get-release-details.outputs.release-type }}
+      #
+      # - name: Create Tag
+      #   if: steps.get-release-details.outputs.make-release == 'true'
+      #   run: |
+      #     git tag "$VERSION"
+      #     git push origin "$VERSION"
+      #   env:
+      #     VERSION: ${{ steps.increment-version.outputs.next-version }}
+      #
+      # - name: Create Release
+      #   uses: softprops/action-gh-release@v2
+      #   if: steps.get-release-details.outputs.make-release == 'true'
+      #   with:
+      #     name: ${{ steps.increment-version.outputs.next-version}}
+      #     tag_name: ${{ steps.increment-version.outputs.next-version }}
+      #     generate_release_notes: true
+      #
+      # - name: Create release summary
+      #   run: |
+      #     cat << EOF >> $GITHUB_STEP_SUMMARY
+      #     ## 🚀 Release summary
+      #
+      #     Workflow was triggered from \`$GITHUB_REF_NAME\`
+      #
+      #     | Detail                     | Value                        |
+      #     | -------------------------- | ---------------------------- |
+      #     | 📦 Make Release?           | \`$MAKE_RELEASE\`            |
+      #     | 🏷️ New Version             | \`$NEW_VERSION\`             |
+      #     | 📌 Previous Version        | \`$PREVIOUS_VERSION\`        |
+      #     | 🔄 Version Bump            | \`$VERSION_BUMP\`            |
+      #     | 🛠️ Specified Manual Bump   | \`$MANUAL_BUMP\`             |
+      #     | 🤖 Auto Determined Bump    | \`$AUTO_BUMP\`               |
+      #     EOF
+      #
+      #     echo "
+      #     Release Summary:
+      #     Make Release: $MAKE_RELEASE
+      #     New Version: $NEW_VERSION
+      #     Previous Version: $PREVIOUS_VERSION
+      #     Version Bump: $VERSION_BUMP
+      #     Specified Manual Bump: $MANUAL_BUMP
+      #     Auto Determined Bump: $AUTO_BUMP
+      #     "
+      #   env:
+      #     GITHUB_REF_NAME: ${{ github.ref_name }}
+      #     MAKE_RELEASE: ${{ steps.get-release-details.outputs.make-release }}
+      #     NEW_VERSION: ${{ steps.increment-version.outputs.next-version || 'None' }}
+      #     PREVIOUS_VERSION: ${{ steps.get-auto-version-bump.outputs.previous_tag }}
+      #     VERSION_BUMP: ${{ steps.get-release-details.outputs.release-type || 'None' }}
+      #     MANUAL_BUMP: ${{ inputs.version-bump || 'None' }}
+      #     AUTO_BUMP: ${{ steps.get-auto-version-bump.outputs.release_type || 'None' }}
+      #
+      # - name: Link to release summary
+      #   run: |
+      #     echo "
+      #     View Release Summary at:
+      #     https://github.com/$GITHUB_REPO/actions/runs/$GITHUB_RUN_ID
+      #     "
+      #   env:
+      #     GITHUB_REPO: ${{ github.repository }}
+      #     GITHUB_RUN_ID: ${{ github.run_id }}
