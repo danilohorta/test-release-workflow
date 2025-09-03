@@ -92,7 +92,7 @@ jobs:
           RELEASE=true
           if [ "$VERSION_BUMP" == "" ] || [ "$DRY_RUN" == "true" ]; then
             RELEASE=false
-          fi 5Code has comments. Press enter to view.
+          fi
 
           echo "release-type=$VERSION_BUMP" >> $GITHUB_OUTPUT
           echo "make-release=$RELEASE" >> $GITHUB_OUTPUT
