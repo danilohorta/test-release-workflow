@@ -3,12 +3,6 @@ name: Create Release
 on:
   workflow_call:
     inputs:
-      commit:
-        description: Branch, tag or commit hash
-        type: string
-        required: false
-        default: main
-
       version-bump:
         description: |
           Optional version bump. One of: 'major', 'minor', 'patch', or 'auto'.
@@ -42,36 +36,36 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit }}
+          fetch-depth: 0
 
-      - name: Validate version-bump input
-        run: |
-          case "${VERSION_BUMP}" in
-            auto|major|minor|patch) ;;
-            *) echo "::error::manual-version-bump must be 'auto', 'major', 'minor' or 'patch'"; exit 1;;
-          esac
-        env:
-          VERSION_BUMP: ${{ inputs.version-bump }}
-
-      - name: Get inferred version bump
-        id: get-inferred-version-bump
-        uses: mathieudutour/github-tag-action@v6.2
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v4.1.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: false
-          default_prerelease_bump: false
-          dry_run: true # Don't create tag, we do this later
+          versionSpec: '6.3.x'
 
-      - name: Get release details
-        id: get-release-details
-        run: |
-          echo "${{ inputs.version-bump }}"
-          echo "new_tag: ${{ steps.get-inferred-version-bump.outputs.new_tag }}"
-          echo "new_version: ${{ steps.get-inferred-version-bump.outputs.new_version }}"
-          echo "previous_tag: ${{ steps.get-inferred-version-bump.outputs.previous_tag }}"
-          echo "previous_version: ${{ steps.get-inferred-version-bump.outputs.previous_version }}"
-          echo "release_type: ${{ steps.get-inferred-version-bump.outputs.release_type }}"
-          echo "changelog: ${{ steps.get-inferred-version-bump.outputs.changelog }}"
+      - name: Determine Version
+        id: version_step
+        uses: gittools/actions/gitversion/execute@v4.1.0
+
+      # - name: Validate version-bump input
+      #   run: |
+      #     case "${VERSION_BUMP}" in
+      #       auto|major|minor|patch) ;;
+      #       *) echo "::error::manual-version-bump must be 'auto', 'major', 'minor' or 'patch'"; exit 1;;
+      #     esac
+      #   env:
+      #     VERSION_BUMP: ${{ inputs.version-bump }}
+      #
+      # - name: Get release details
+      #   id: get-release-details
+      #   run: |
+      #     echo "${{ inputs.version-bump }}"
+      #     echo "new_tag: ${{ steps.get-inferred-version-bump.outputs.new_tag }}"
+      #     echo "new_version: ${{ steps.get-inferred-version-bump.outputs.new_version }}"
+      #     echo "previous_tag: ${{ steps.get-inferred-version-bump.outputs.previous_tag }}"
+      #     echo "previous_version: ${{ steps.get-inferred-version-bump.outputs.previous_version }}"
+      #     echo "release_type: ${{ steps.get-inferred-version-bump.outputs.release_type }}"
+      #     echo "changelog: ${{ steps.get-inferred-version-bump.outputs.changelog }}"
       #
       # - name: Increment Version
       #   id: increment-version
