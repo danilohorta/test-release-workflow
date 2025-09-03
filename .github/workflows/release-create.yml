@@ -52,63 +52,60 @@ jobs:
           esac
         env:
           VERSION_BUMP: ${{ inputs.version-bump }}
-      #
-      # - name: Get auto-determined version bump
-      #   id: get-auto-version-bump
-      #   uses: mathieudutour/github-tag-action@v6.2
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     default_bump: false
-      #     default_prerelease_bump: false
-      #     dry_run: true # Don't create tag, we do this later
-      #
-      # - name: Get release details
-      #   id: get-release-details
-      #   run: |
-      #     case "$VERSION_BUMP" in
-      #       "major") MANUAL_PRIORITY=3 ;;
-      #       "minor") MANUAL_PRIORITY=2 ;;
-      #       "patch") MANUAL_PRIORITY=1 ;;
-      #       *) MANUAL_PRIORITY=0 ;;
-      #     esac
-      #
-      #     case "$AUTO_VERSION_BUMP" in
-      #       "major") AUTO_PRIORITY=3 ;;
-      #       "minor") AUTO_PRIORITY=2 ;;
-      #       "patch") AUTO_PRIORITY=1 ;;
-      #       *) AUTO_PRIORITY=0 ;;
-      #     esac
-      #
-      #     RELEASE=true
-      #     if [ $DRY_RUN ]; then
-      #       RELEASE=false
-      #     fi
-      #
-      #     if [ $MANUAL_PRIORITY -eq 0 ] && [ $AUTO_PRIORITY -eq 0 ]; then
-      #       VERSION_BUMP=""
-      #       RELEASE=false
-      #     elif [ $AUTO_PRIORITY -gt $MANUAL_PRIORITY ]; then
-      #       echo "::error::Manual version bump ($VERSION_BUMP) is smaller than the auto-determined version bump ($AUTO_VERSION_BUMP)"
-      #       echo "::error::Manual version bump must be greater than or equal to the auto-determined version bump."
-      #       exit 1
-      #     elif [ $MANUAL_PRIORITY -gt $AUTO_PRIORITY ]; then
-      #       VERSION_BUMP=$VERSION_BUMP
-      #     else
-      #       VERSION_BUMP=$AUTO_VERSION_BUMP
-      #     fi
-      #
-      #     echo "release-type=$VERSION_BUMP" >> $GITHUB_OUTPUT
-      #     echo "make-release=$RELEASE" >> $GITHUB_OUTPUT
-      #
-      #     echo "
-      #     Output:
-      #     release-type=$VERSION_BUMP
-      #     make-release=$RELEASE
-      #     "
-      #   env:
-      #     VERSION_BUMP: ${{ inputs.version-bump }}
-      #     AUTO_VERSION_BUMP: ${{ steps.get-auto-version-bump.outputs.release_type }}
-      #     DRY_RUN: ${{ inputs.dry-run }}
+
+      - name: Get auto-determined version bump
+        id: get-auto-version-bump
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: false
+          default_prerelease_bump: false
+          dry_run: true # Don't create tag, we do this later
+      - name: Get release details
+        id: get-release-details
+        run: |
+          get_priority() {
+            case "$1" in
+            "major") echo 3 ;;
+            "minor") echo 2 ;;
+            "patch") echo 1 ;;
+            *) echo 0 ;;
+            esac
+          }
+
+          INPUT_BUMP_PRIORITY=$(get_priority "$VERSION_BUMP_INPUT")
+          INFERRED_BUMP_PRIORITY=$(get_priority "$VERSION_BUMP_INFERRED")
+
+          # Determine version bump
+          if [ "$INPUT_BUMP_PRIORITY" -eq 0 ] && [ "$INFERRED_BUMP_PRIORITY" -eq 0 ]; then
+            VERSION_BUMP=""
+          elif [ "$INPUT_BUMP_PRIORITY" -gt "$INFERRED_BUMP_PRIORITY" ]; then
+            VERSION_BUMP=$VERSION_BUMP_INPUT
+          elif [ "$INFERRED_BUMP_PRIORITY" -gt "$INPUT_BUMP_PRIORITY" ]; then
+            echo "::error::Specified version bump ($VERSION_BUMP_INPUT) is smaller than the version bump inferred from commits ($VERSION_BUMP_INFERRED)"
+            exit 1
+          else
+            VERSION_BUMP=$VERSION_BUMP_INFERRED
+          fi
+
+          # Determine whether to release
+          RELEASE=true
+          if [ "$VERSION_BUMP" == "" ] || [ "$DRY_RUN" == "true" ]; then
+            RELEASE=false
+          fi 5Code has comments. Press enter to view.
+
+          echo "release-type=$VERSION_BUMP" >> $GITHUB_OUTPUT
+          echo "make-release=$RELEASE" >> $GITHUB_OUTPUT
+
+          echo "
+          Output:
+          release-type=$VERSION_BUMP
+          make-release=$RELEASE
+          "
+        env:
+          VERSION_BUMP_INPUT: ${{ inputs.version-bump }}
+          VERSION_BUMP_INFERRED: ${{ steps.get-inferred-version-bump.outputs.release_type }}
+          DRY_RUN: ${{ inputs.dry-run }}
       #
       # - name: Increment Version
       #   id: increment-version
