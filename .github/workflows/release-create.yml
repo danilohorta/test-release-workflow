@@ -65,7 +65,7 @@ jobs:
       - name: Get release details
         id: get-release-details
         run: |
-          echo ${{ steps.get-release-details.outputs.release-type }}
+          echo ${{ steps.get-auto-version-bump.outputs.previous_tag }}
       #
       # - name: Increment Version
       #   id: increment-version
